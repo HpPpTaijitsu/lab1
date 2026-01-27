@@ -3,6 +3,8 @@ import math
 from collections import defaultdict, deque
 import matplotlib.pyplot as plt
 import networkx as nx
+import itertools
+import time
 
 class Problem:
     def __init__(self, initial=None, goal=None, **kwds):
@@ -152,7 +154,6 @@ class GraphProblem(Problem):
     
     def action_cost(self, s, a, s1):
         """Возвращает стоимость действия."""
-        # Ищем стоимость перехода из s в s1
         for city, cost in self.graph[s]:
             if city == s1:
                 return cost
@@ -248,7 +249,6 @@ def visualize_graph(graph_data, path=None, title="Карта дорог Румы
         font_size=8
     )
     
-
     plt.title(title, fontsize=16, fontweight='bold')
     plt.axis('off')
     plt.tight_layout()
@@ -259,8 +259,131 @@ def visualize_graph(graph_data, path=None, title="Карта дорог Румы
     plt.show()
 
 
+def solve_tsp_bruteforce(start_city='Arad', max_cities=6):
+    """
+    Решает задачу коммивояжёра методом полного перебора.
+    
+    Args:
+        start_city: начальный и конечный город
+        max_cities: максимальное количество городов для анализа
+    """
+    print("\n" + "=" * 60)
+    print("РЕШЕНИЕ ЗАДАЧИ КОММИВОЯЖЁРА (TSP)")
+    print("=" * 60)
+    
+    # Создаем граф из данных
+    G = nx.Graph()
+    for city, connections in romania_map.items():
+        for neighbor, weight in connections:
+            G.add_edge(city, neighbor, weight=weight)
+    
+    # Список всех городов
+    all_cities = list(romania_map.keys())
+    
+    # Начинаем с небольшого количества городов
+    for num_cities in range(5, min(max_cities + 1, len(all_cities) + 1)):
+        print(f"\n{'='*40}")
+        print(f"Анализ для {num_cities} городов:")
+        print(f"{'='*40}")
+        
+        # Выбираем города для анализа
+        cities_to_visit = [start_city]
+        # Добавляем другие города (исключая начальный)
+        for city in all_cities:
+            if city != start_city and city in G.nodes:
+                cities_to_visit.append(city)
+            if len(cities_to_visit) >= num_cities:
+                break
+        
+        print(f"Города: {', '.join(cities_to_visit)}")
+        print(f"Количество маршрутов для перебора: {math.factorial(len(cities_to_visit)-1):,}")
+        
+        # Создаем матрицу расстояний
+        n = len(cities_to_visit)
+        distance_matrix = [[0] * n for _ in range(n)]
+        
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    try:
+                        distance_matrix[i][j] = nx.shortest_path_length(
+                            G, cities_to_visit[i], cities_to_visit[j], weight='weight'
+                        )
+                    except nx.NetworkXNoPath:
+                        distance_matrix[i][j] = float('inf')
+        
+        # Полный перебор всех возможных маршрутов
+        start_time = time.time()
+        
+        best_route = None
+        best_distance = float('inf')
+        routes_checked = 0
+        
+        # Индекс начального города
+        start_idx = cities_to_visit.index(start_city)
+        other_indices = [i for i in range(n) if i != start_idx]
+        
+        # Перебираем все перестановки
+        for perm in itertools.permutations(other_indices):
+            # Строим маршрут: начальный -> перестановка -> начальный
+            route_indices = [start_idx] + list(perm) + [start_idx]
+            
+            # Считаем длину маршрута
+            total_distance = 0
+            valid_route = True
+            
+            for k in range(len(route_indices) - 1):
+                dist = distance_matrix[route_indices[k]][route_indices[k + 1]]
+                if dist == float('inf'):
+                    valid_route = False
+                    break
+                total_distance += dist
+            
+            routes_checked += 1
+            
+            if valid_route and total_distance < best_distance:
+                best_distance = total_distance
+                best_route = [cities_to_visit[i] for i in route_indices]
+        
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        
+        print(f"\nРезультаты для {num_cities} городов:")
+        print(f"Время выполнения: {elapsed_time:.6f} секунд")
+        print(f"Проверено маршрутов: {routes_checked:,}")
+        
+        if best_route:
+            # Строим детальный путь для визуализации
+            detailed_path = []
+            for i in range(len(best_route) - 1):
+                shortest_path = nx.shortest_path(G, best_route[i], best_route[i + 1], weight='weight')
+                detailed_path.extend(shortest_path[:-1])
+            
+            detailed_path.append(start_city)
+            
+            print(f"Оптимальный маршрут: {' → '.join(best_route)}")
+            print(f"Общая длина: {best_distance} км")
+            
+            visualize_graph(
+                romania_map,
+                path=detailed_path,
+                title=f"Задача коммивояжёра ({num_cities} городов)\n"
+                      f"Длина: {best_distance} км, Время: {elapsed_time:.4f} с"
+            )
+            
+            # Если время слишком большое, останавливаемся
+            if elapsed_time > 10:
+                print("\n⚠️ Время выполнения слишком велико. Останавливаем анализ.")
+                print("Для большего количества городов нужны более эффективные алгоритмы.")
+                break
+        else:
+            print("Нет допустимого маршрута через все выбранные города.")
+    
+    return best_route, best_distance
+
+
 def main():
-    """Основная функция для поиска пути от Арада до Бухареста."""
+    """Основная функция для поиска пути от Арада до Бухареста и решения TSP."""
     print("Поиск оптимального пути от Арада до Бухареста")
     print("=" * 50)
     
@@ -310,12 +433,61 @@ def main():
         title = f"Оптимальный путь от Арада до Бухареста\nДлина: {total_cost} км"
         visualize_graph(romania_map, path=path, title=title)
     
-    # Статистика графа
     print("\n" + "=" * 50)
     print("Статистика графа:")
     print(f"Всего городов: {len(romania_map)}")
     total_roads = sum(len(connections) for connections in romania_map.values())
     print(f"Всего дорог: {total_roads // 2} (неориентированные)")
+    
+    # Решение задачи коммивояжёра
+    print("\n" + "=" * 60)
+    print("ПЕРЕХОДИМ К ЗАДАЧЕ КОММИВОЯЖЁРА")
+    print("=" * 60)
+    
+    # Объяснение задачи коммивояжёра
+    print("\n ЗАДАЧА КОММИВОЯЖЁРА (TSP):")
+    print("- Нужно найти кратчайший маршрут, проходящий через все города")
+    print("- Начинаем и заканчиваем в одном городе")
+    print("- Каждый город посещается ровно один раз")
+    print(f"- Для N городов существует (N-1)! возможных маршрутов")
+    print(f"- Для 5 городов: 4! = 24 маршрута (быстро)")
+    print(f"- Для 10 городов: 9! = 362,880 маршрутов (медленно)")
+    print(f"- Для 20 городов: 19! ≈ 1.2×10¹⁷ маршрутов (невозможно)")
+    
+    print("\n ОЦЕНКА ВРЕМЕНИ ВЫПОЛНЕНИЯ:")
+    for n in range(5, 11):
+        permutations = math.factorial(n - 1)
+        estimated_time = permutations * 0.00001
+        
+        time_str = f"{estimated_time:.2f} сек"
+        if estimated_time > 60:
+            estimated_time /= 60
+            time_str = f"{estimated_time:.2f} мин"
+            if estimated_time > 60:
+                estimated_time /= 60
+                time_str = f"{estimated_time:.2f} час"
+                if estimated_time > 24:
+                    estimated_time /= 24
+                    time_str = f"{estimated_time:.2f} дней"
+        
+        print(f"  {n} городов: {permutations:,} маршрутов → ~{time_str}")
+    
+    print("\n" + "=" * 50)
+    try:
+        max_cities = int(input("Введите максимальное количество городов для анализа (5-7 рекомендовано): ") or "6")
+        max_cities = max(5, min(max_cities, 8))  # Ограничиваем от 5 до 8
+    except:
+        max_cities = 6
+    
+    # Запускаем решение TSP
+    tsp_route, tsp_distance = solve_tsp_bruteforce(start_city='Arad', max_cities=max_cities)
+    
+    print("\n" + "=" * 60)
+    print("ВЫВОДЫ ПО ЗАДАЧЕ КОММИВОЯЖЁРА:")
+    print("=" * 60)
+    print("1. Полный перебор работает только для малого N (5-7 городов)")
+    print("2. Время растет факториально: O((N-1)!)")
+    print("3. Для 20 городов нужны приближенные алгоритмы:")
     
     return solution
 
