@@ -1,10 +1,10 @@
 import heapq
 import math
 from collections import defaultdict, deque
+import matplotlib.pyplot as plt
+import networkx as nx
 
-# Классы из методички
 class Problem:
-    """Абстрактный класс для формальной задачи."""
     def __init__(self, initial=None, goal=None, **kwds):
         self.__dict__.update(initial=initial, goal=goal, **kwds)
     
@@ -29,7 +29,6 @@ class Problem:
 
 
 class Node:
-    """Узел в дереве поиска"""
     def __init__(self, state, parent=None, action=None, path_cost=0):
         self.__dict__.update(state=state, parent=parent, action=action,
                            path_cost=path_cost)
@@ -49,7 +48,6 @@ cutoff = Node('cutoff', path_cost=math.inf)
 
 
 def expand(problem, node):
-    """Раскрываем узел, создав дочерние узлы."""
     s = node.state
     for action in problem.actions(s):
         s1 = problem.result(s, action)
@@ -58,21 +56,18 @@ def expand(problem, node):
 
 
 def path_actions(node):
-    """Последовательность действий, чтобы добраться до этого узла."""
     if node.parent is None:
         return []
     return path_actions(node.parent) + [node.action]
 
 
 def path_states(node):
-    """Последовательность состояний, чтобы добраться до этого узла."""
     if node in (cutoff, failure, None):
         return []
     return path_states(node.parent) + [node.state]
 
 
 class PriorityQueue:
-    """Очередь с приоритетом"""
     def __init__(self, items=(), key=lambda x: x):
         self.key = key
         self.items = []  # heap of (score, item) pairs
@@ -80,12 +75,10 @@ class PriorityQueue:
             self.add(item)
     
     def add(self, item):
-        """Добавляем элемент в очередь."""
         pair = (self.key(item), item)
         heapq.heappush(self.items, pair)
     
     def pop(self):
-        """Достаем и возвращаем элемент с минимальным значением f(item)."""
         return heapq.heappop(self.items)[1]
     
     def top(self):
@@ -95,7 +88,7 @@ class PriorityQueue:
         return len(self.items)
 
 
-# Граф дорог Румынии (как в примере)
+# Граф дорог Румынии
 romania_map = {
     'Arad': [('Zerind', 75), ('Sibiu', 140), ('Timisoara', 118)],
     'Zerind': [('Arad', 75), ('Oradea', 71)],
@@ -119,7 +112,7 @@ romania_map = {
     'Neamt': [('Iasi', 87)]
 }
 
-# Прямолинейные расстояния до Бухареста (эвристика)
+# Эвристика
 straight_line_to_bucharest = {
     'Arad': 366,
     'Bucharest': 0,
@@ -145,7 +138,6 @@ straight_line_to_bucharest = {
 
 
 class GraphProblem(Problem):
-    """Задача поиска пути на графе."""
     def __init__(self, initial, goal, graph):
         super().__init__(initial=initial, goal=goal)
         self.graph = graph
@@ -195,15 +187,88 @@ def astar_search(problem):
     return best_first_search(problem, f=lambda n: n.path_cost + problem.h(n))
 
 
+def visualize_graph(graph_data, path=None, title="Карта дорог Румынии"):
+    """Визуализация графа с помощью networkx и matplotlib"""
+    G = nx.Graph()
+    
+    for city, connections in graph_data.items():
+        for neighbor, weight in connections:
+            G.add_edge(city, neighbor, weight=weight)
+    
+    pos = nx.spring_layout(G, seed=42, k=2, iterations=50)
+    
+    plt.figure(figsize=(14, 10))
+    
+    nx.draw_networkx_nodes(
+        G, pos,
+        node_size=700,
+        node_color='lightblue',
+        edgecolors='black',
+        linewidths=2
+    )
+    
+    nx.draw_networkx_edges(
+        G, pos,
+        width=1,
+        alpha=0.5,
+        edge_color='gray'
+    )
+    
+    # Если задан путь, выделяем его
+    if path and len(path) > 1:
+        path_edges = [(path[i], path[i+1]) for i in range(len(path)-1)]
+        
+        nx.draw_networkx_nodes(
+            G, pos,
+            nodelist=path,
+            node_size=800,
+            node_color='red',
+            edgecolors='black',
+            linewidths=2
+        )
+        
+        nx.draw_networkx_edges(
+            G, pos,
+            edgelist=path_edges,
+            width=3,
+            alpha=0.8,
+            edge_color='red'
+        )
+    
+    nx.draw_networkx_labels(
+        G, pos,
+        font_size=10,
+        font_weight='bold'
+    )
+    
+    edge_labels = nx.get_edge_attributes(G, 'weight')
+    nx.draw_networkx_edge_labels(
+        G, pos,
+        edge_labels=edge_labels,
+        font_size=8
+    )
+    
+
+    plt.title(title, fontsize=16, fontweight='bold')
+    plt.axis('off')
+    plt.tight_layout()
+    
+    # Сохраняем и показываем график
+    plt.savefig('romania_graph.png', dpi=300, bbox_inches='tight')
+    print("\nГраф сохранен в файл 'romania_graph.png'")
+    plt.show()
+
+
 def main():
     """Основная функция для поиска пути от Арада до Бухареста."""
     print("Поиск оптимального пути от Арада до Бухареста")
     print("=" * 50)
     
-    # Создаем задачу
+    print("\nВизуализация полного графа дорог Румынии...")
+    visualize_graph(romania_map, title="Полная карта дорог Румынии")
+    
     problem = GraphProblem('Arad', 'Bucharest', romania_map)
     
-    # Выполняем поиск A*
     print("\nВыполняем поиск A*...")
     solution = astar_search(problem)
     
@@ -212,14 +277,11 @@ def main():
     else:
         # Получаем путь
         path = path_states(solution)
-        actions = path_actions(solution)
         total_cost = solution.path_cost
         
-        # Выводим результаты
-        print(f"\nНайден оптимальный путь!")
+        print(f"\n✓ Найден оптимальный путь!")
         print(f"Количество городов: {len(path)}")
         print(f"Общая дистанция: {total_cost} км")
-        print(f"Общая стоимость: {total_cost}")
         
         print("\nМаршрут:")
         for i, (city, next_city) in enumerate(zip(path, path[1:] + [''])):
@@ -236,25 +298,27 @@ def main():
         
         print(f"\nПуть: {' -> '.join(path)}")
         
-        # Проверяем корректность пути (для примера из литературы)
+        # Проверяем корректность пути
         expected_path = ['Arad', 'Sibiu', 'Rimnicu Vilcea', 'Pitesti', 'Bucharest']
         if path == expected_path:
             print("\n✓ Найден ожидаемый оптимальный путь!")
         else:
             print(f"\nПримечание: ожидался путь {expected_path}")
+        
+        # Визуализируем найденный путь
+        print("\nВизуализация найденного пути...")
+        title = f"Оптимальный путь от Арада до Бухареста\nДлина: {total_cost} км"
+        visualize_graph(romania_map, path=path, title=title)
+    
+    # Статистика графа
+    print("\n" + "=" * 50)
+    print("Статистика графа:")
+    print(f"Всего городов: {len(romania_map)}")
+    total_roads = sum(len(connections) for connections in romania_map.values())
+    print(f"Всего дорог: {total_roads // 2} (неориентированные)")
     
     return solution
 
 
 if __name__ == "__main__":
-    # Запускаем поиск
     result = main()
-    
-    # Дополнительная информация
-    print("\n" + "=" * 50)
-    print("Информация о графе:")
-    print(f"Всего городов: {len(romania_map)}")
-    
-    # Подсчет всех дорог
-    total_roads = sum(len(connections) for connections in romania_map.values())
-    print(f"Всего дорог: {total_roads // 2} (каждая дорога учтена дважды)")
