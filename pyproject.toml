@@ -18,10 +18,10 @@ dependencies = [
 ]
 
 [tool.black]
-line-length = 88
-target-version = ["py39"]
+line-length = 79
+target-version = ["py313"]
 
 [tool.flake8]
-max-line-length = 88
+max-line-length = 79
 extend-ignore = ["E203", "W503", "F541"]
 exclude = [".venv", "build", "dist"]

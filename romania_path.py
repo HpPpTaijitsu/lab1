@@ -1,9 +1,10 @@
 import heapq
+import itertools
 import math
+import time
+
 import matplotlib.pyplot as plt
 import networkx as nx
-import itertools
-import time
 
 
 class Problem:
@@ -26,7 +27,9 @@ class Problem:
         return 0
 
     def __str__(self):
-        return "{}({!r}, {!r})".format(type(self).__name__, self.initial, self.goal)
+        return "{}({!r}, {!r})".format(
+            type(self).__name__, self.initial, self.goal
+        )
 
 
 class Node:
@@ -95,12 +98,21 @@ romania_map = {
     "Arad": [("Zerind", 75), ("Sibiu", 140), ("Timisoara", 118)],
     "Zerind": [("Arad", 75), ("Oradea", 71)],
     "Oradea": [("Zerind", 71), ("Sibiu", 151)],
-    "Sibiu": [("Arad", 140), ("Oradea", 151), ("Fagaras", 99), ("Rimnicu Vilcea", 80)],
+    "Sibiu": [
+        ("Arad", 140),
+        ("Oradea", 151),
+        ("Fagaras", 99),
+        ("Rimnicu Vilcea", 80),
+    ],
     "Timisoara": [("Arad", 118), ("Lugoj", 111)],
     "Lugoj": [("Timisoara", 111), ("Mehadia", 70)],
     "Mehadia": [("Lugoj", 70), ("Drobeta", 75)],
     "Drobeta": [("Mehadia", 75), ("Craiova", 120)],
-    "Craiova": [("Drobeta", 120), ("Rimnicu Vilcea", 146), ("Pitesti", 138)],
+    "Craiova": [
+        ("Drobeta", 120),
+        ("Rimnicu Vilcea", 146),
+        ("Pitesti", 138),
+    ],
     "Rimnicu Vilcea": [("Sibiu", 80), ("Craiova", 146), ("Pitesti", 97)],
     "Fagaras": [("Sibiu", 99), ("Bucharest", 211)],
     "Pitesti": [("Rimnicu Vilcea", 97), ("Craiova", 138), ("Bucharest", 101)],
@@ -208,7 +220,12 @@ def visualize_graph(graph_data, path=None, title="Карта дорог Румы
     plt.figure(figsize=(14, 10))
 
     nx.draw_networkx_nodes(
-        G, pos, node_size=700, node_color="lightblue", edgecolors="black", linewidths=2
+        G,
+        pos,
+        node_size=700,
+        node_color="lightblue",
+        edgecolors="black",
+        linewidths=2,
     )
 
     nx.draw_networkx_edges(G, pos, width=1, alpha=0.5, edge_color="gray")
@@ -227,7 +244,12 @@ def visualize_graph(graph_data, path=None, title="Карта дорог Румы
         )
 
         nx.draw_networkx_edges(
-            G, pos, edgelist=path_edges, width=3, alpha=0.8, edge_color="red"
+            G,
+            pos,
+            edgelist=path_edges,
+            width=3,
+            alpha=0.8,
+            edge_color="red",
         )
 
     nx.draw_networkx_labels(G, pos, font_size=10, font_weight="bold")
@@ -290,7 +312,10 @@ def solve_tsp_bruteforce(start_city="Arad", max_cities=6):
                 if i != j:
                     try:
                         distance_matrix[i][j] = nx.shortest_path_length(
-                            G, cities_to_visit[i], cities_to_visit[j], weight="weight"
+                            G,
+                            cities_to_visit[i],
+                            cities_to_visit[j],
+                            weight="weight",
                         )
                     except nx.NetworkXNoPath:
                         distance_matrix[i][j] = float("inf")
@@ -353,9 +378,12 @@ def solve_tsp_bruteforce(start_city="Arad", max_cities=6):
             )
 
             if elapsed_time > 10:
-                print("\n⚠️ Время выполнения слишком велико. Останавливаем анализ.")
                 print(
-                    "Для большего количества городов нужны более эффективные алгоритмы."
+                    "\n⚠️ Слишком долго. Останавливаем анализ."
+                )
+                print(
+                    "Для большего количества городов нужны "
+                    "более эффективные алгоритмы."
                 )
                 break
         else:
@@ -401,14 +429,23 @@ def main():
 
         print(f"\nПуть: {' -> '.join(path)}")
 
-        expected_path = ["Arad", "Sibiu", "Rimnicu Vilcea", "Pitesti", "Bucharest"]
+        expected_path = [
+            "Arad",
+            "Sibiu",
+            "Rimnicu Vilcea",
+            "Pitesti",
+            "Bucharest",
+        ]
         if path == expected_path:
             print("\n✓ Найден ожидаемый оптимальный путь!")
         else:
             print(f"\nПримечание: ожидался путь {expected_path}")
 
         print("\nВизуализация найденного пути...")
-        title = f"Оптимальный путь от Арада до Бухареста\nДлина: {total_cost} км"
+        title = (
+            f"Оптимальный путь от Арада до Бухареста\n"
+            f"Длина: {total_cost} км"
+        )
         visualize_graph(romania_map, path=path, title=title)
 
     print("\n" + "=" * 50)
@@ -452,7 +489,8 @@ def main():
     print("\n" + "=" * 50)
     try:
         max_cities = int(
-            input("Введите максимальное кол-во городов для анализа (5-7): ") or "6"
+            input("Введите максимальное кол-во городов для анализа (5-7): ")
+            or "6"
         )
         max_cities = max(5, min(max_cities, 8))  # Ограничиваем от 5 до 8
     except ValueError:
