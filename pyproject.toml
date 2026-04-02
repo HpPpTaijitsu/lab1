@@ -10,7 +10,7 @@ readme = "README.md"
 authors = [
     {name = "ilya", email = "example@mail.com"}
 ]
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.13"
 dependencies = [
     "matplotlib>=3.10.8",
